@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Engineering Toolkit 04 — Modelling Memory Systems: DRAM and HBM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&family=Geist+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #1c1815;
+            --bg-card: #231e1a;
+            --bg-code: #2b2520;
+            --text-primary: #efe8dc;
+            --text-secondary: #a2978b;
+            --accent: #aabd59;
+            --accent-dim: #aabd5944;
+            --accent-glow: #aabd5933;
+            --border: #3a322b;
+            --font-display: 'Bricolage Grotesque', sans-serif;
+            --font-mono: 'Geist Mono', 'Geist Mono', monospace;
+            --font-body: 'Instrument Sans', sans-serif;
+            --max-width: 900px;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 17px;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* ── Header ── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .hero > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .series-label {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .hero h1 .accent {
+            color: var(--accent);
+        }
+
+        .hero .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 2rem;
+        }
+
+        /* ── Tag Pills ── */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .tag {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+            white-space: nowrap;
+        }
+
+        /* ── Pipeline Flow Bar ── */
+        .pipeline {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            margin-bottom: 1rem;
+            max-width: var(--max-width);
+        }
+
+        .pipeline-step {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 0.3rem 0.7rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .pipeline-arrow {
+            color: var(--accent);
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        /* ── Slides ── */
+        .slide {
+            min-height: 100vh;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 4rem 1.5rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .slide-number {
+            font-family: var(--font-display);
+            font-size: 5rem;
+            font-weight: 700;
+            color: var(--accent-dim);
+            position: absolute;
+            top: 2rem;
+            right: 1.5rem;
+            line-height: 1;
+            user-select: none;
+        }
+
+        .slide h2 {
+            font-family: var(--font-display);
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            line-height: 1.25;
+        }
+
+        .slide h3 {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .slide p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .slide p strong {
+            color: var(--text-primary);
+        }
+
+        .slide ul, .slide ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .slide li {
+            margin-bottom: 0.4rem;
+        }
+
+        .slide li strong {
+            color: var(--text-primary);
+        }
+
+        /* ── Code Blocks ── */
+        .code-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1.25rem 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            background: rgba(170,189,89,0.08);
+            padding: 0.4rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-block pre {
+            margin: 0;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #dad1c5;
+        }
+
+        /* Syntax highlighting (manual) */
+        .kw { color: #de805a; }
+        .fn { color: #d7bbdf; }
+        .str { color: #bcdbd4; }
+        .cm { color: #a2978b; font-style: italic; }
+        .num { color: #97cdc6; }
+        .type { color: #e3b174; }
+        .dir { color: #de805a; }
+        .mac { color: #e3b174; }
+
+        /* ── Tables ── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 1.25rem 0;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: var(--bg-code);
+            color: var(--accent);
+            font-weight: 600;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font-display);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:nth-child(even) td {
+            background: rgba(35,30,26,0.5);
+        }
+
+        /* ── Diagrams ── */
+        .diagram-flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .diagram-box {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .diagram-box.accent {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(170,189,89,0.08);
+        }
+
+        .diagram-box.dim {
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+
+        .diagram-arrow {
+            color: var(--accent);
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        /* Vertical flow diagrams */
+        .diagram-vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .diagram-vertical .diagram-arrow {
+            font-size: 1.1rem;
+        }
+
+        /* Nested hierarchy diagram */
+        .hierarchy {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .hierarchy-level {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .hierarchy-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .hierarchy-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+
+        .hierarchy-item {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .hierarchy-item.accent {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(170,189,89,0.08);
+        }
+
+        /* Grid diagram */
+        .diagram-grid {
+            display: grid;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .diagram-grid.cols-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .diagram-grid.cols-3 {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .diagram-panel {
+            padding: 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .diagram-panel.accent-border {
+            border-left: 3px solid var(--accent);
+        }
+
+        .diagram-panel h4 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .diagram-panel p, .diagram-panel ul {
+            font-size: 0.85rem;
+        }
+
+        /* ── Callout Boxes ── */
+        .callout {
+            background: var(--bg-card);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 1rem 1.25rem;
+            margin: 1.25rem 0;
+        }
+
+        .callout p {
+            margin-bottom: 0;
+        }
+
+        .callout .callout-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.3rem;
+        }
+
+        /* ── Tier Visual ── */
+        .tier-visual {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .tier-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .tier-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 90px;
+            text-align: right;
+        }
+
+        .tier-fill {
+            height: 32px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding: 0 0.75rem;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            white-space: nowrap;
+            transition: width 0.6s ease;
+        }
+
+        .tier-cost {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            min-width: 70px;
+        }
+
+        /* ── Contents list ── */
+        .contents-list {
+            list-style: none;
+            padding-left: 0;
+            counter-reset: contents;
+        }
+
+        .contents-list li {
+            counter-increment: contents;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .contents-list li:last-child {
+            border-bottom: none;
+        }
+
+        .contents-list li::before {
+            content: counter(contents, decimal-leading-zero);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            min-width: 2rem;
+        }
+
+        .contents-list a {
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .contents-list a:hover {
+            color: var(--accent);
+        }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            max-width: var(--max-width);
+            margin: 0 auto;
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 640px) {
+            .slide {
+                padding: 3rem 1rem;
+                min-height: auto;
+            }
+
+            .slide-number {
+                font-size: 3rem;
+                top: 1.5rem;
+                right: 1rem;
+            }
+
+            .slide h2 {
+                font-size: 1.5rem;
+            }
+
+            .diagram-grid.cols-2,
+            .diagram-grid.cols-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .pipeline {
+                gap: 0.15rem;
+            }
+
+            .pipeline-step {
+                font-size: 0.6rem;
+                padding: 0.2rem 0.4rem;
+            }
+
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+
+            table {
+                font-size: 0.78rem;
+            }
+
+            .tier-label {
+                min-width: 60px;
+                font-size: 0.65rem;
+            }
+
+            .tier-fill {
+                font-size: 0.6rem;
+                height: 26px;
+            }
+        }
+
+        /* ── Interactive controls (added for Local LLM series) ── */
+        .control-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin: 1.25rem 0;
+        }
+        .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .control-row label {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            min-width: 180px;
+        }
+        .control-row input[type="range"] {
+            flex: 1;
+            min-width: 160px;
+            accent-color: var(--accent);
+        }
+        .control-row input[type="number"],
+        .control-row select {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 4px;
+            padding: 0.3rem 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+        .control-row .val {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            min-width: 80px;
+            text-align: right;
+        }
+        .btn {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 0.4rem 0.9rem;
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .btn:hover { background: rgba(170,189,89,0.2); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn.secondary {
+            background: var(--bg-code);
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+        .result-box {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            margin-top: 0.75rem;
+        }
+        .result-box .line-label { color: var(--text-secondary); }
+        .result-box .line-val   { color: var(--accent); font-weight: 600; }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .metric {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.6rem 0.8rem;
+            text-align: center;
+        }
+        .metric .metric-label {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .metric .metric-value {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-top: 0.2rem;
+        }
+
+        /* Canvas / SVG containers */
+        .canvas-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.25rem 0;
+            overflow-x: auto;
+        }
+        .canvas-wrap canvas,
+        .canvas-wrap svg {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+        }
+
+        /* Small inline badge */
+        .badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            padding: 0.1rem 0.45rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: middle;
+            margin-left: 0.3rem;
+        }
+        .badge.ok    { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .badge.warn  { border-color: #e3b174; color: #e3b174; background: rgba(227,177,116,0.08); }
+        .badge.bad   { border-color: #de805a; color: #de805a; background: rgba(222,128,90,0.08); }
+
+
+        /* ── LLM Inference Simulators additions ── */
+        .canvas-wrap canvas { image-rendering: auto; display: block; width: 100%; height: auto; }
+        .canvas-wrap svg { max-width: 100%; height: auto; }
+        .ladder { display: grid; gap: 0.4rem; margin: 1.25rem 0; }
+        .ladder-row {
+            display: grid; grid-template-columns: 11rem 1fr 7.5rem; gap: 0.75rem; align-items: center;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+            padding: 0.55rem 0.85rem; font-size: 0.88rem;
+        }
+        .ladder-row .rung { font-family: var(--font-display); font-weight: 600; color: var(--accent); }
+        .ladder-row .speed { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-secondary); text-align: right; }
+        .res-list { list-style: none; padding: 0; margin: 0.75rem 0; }
+        .res-list li { padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
+        .res-list li:last-child { border-bottom: none; }
+        .res-list .what { color: var(--text-secondary); display: block; font-size: 0.86rem; margin-top: 0.15rem; }
+        .res-list a { color: var(--accent); text-decoration: none; }
+        .res-list a:hover { text-decoration: underline; }
+        .qa { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; margin: 0.6rem 0; padding: 0.2rem 1rem; }
+        .qa summary { cursor: pointer; padding: 0.6rem 0; font-weight: 600; }
+        .qa p, .qa ul { margin-bottom: 0.75rem; font-size: 0.92rem; }
+        .sim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.4rem 1.25rem; }
+        .chart-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+        .chart-title { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.3rem; }
+        .slide a { color: var(--accent); }
+        @media (max-width: 640px) {
+            .ladder-row { grid-template-columns: 1fr; gap: 0.2rem; }
+            .ladder-row .speed { text-align: left; }
+        }
+        .concepts { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 0.75rem 1rem; margin-top: 1.25rem; font-size: 0.88rem; }
+        .concepts p { margin: 0 0 0.4rem; color: var(--text-secondary); }
+        .concepts .chips { display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; }
+        .concepts .chips a { border: 1px solid var(--border); border-radius: 999px; padding: 0.1rem 0.6rem; text-decoration: none; font-size: 0.82rem; }
+        .concepts .chips a:hover { border-color: var(--accent); }
+        /* ── Simulation Engineering Toolkit additions ── */
+        .code-header a.src-link { color: var(--text-secondary); text-decoration: none; float: right; }
+        .code-header a.src-link:hover { color: var(--accent); text-decoration: underline; }
+        p.src { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-secondary); margin: -0.75rem 0 1rem; }
+        p.src a { color: var(--text-secondary); }
+        .control-panel select, .control-panel input[type=number] { background: var(--bg-code); color: var(--text-primary); border: 1px solid var(--border); border-radius: 4px; padding: 0.2rem 0.4rem; font-family: var(--font-mono); font-size: 0.8rem; }
+        .mut-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.4rem 1rem; font-size: 0.85rem; }
+        .mut-grid label { display: flex; gap: 0.5rem; align-items: baseline; cursor: pointer; }
+        .mut-list { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.7; }
+        .mut-list .killed { color: var(--accent); }
+        .mut-list .survived { color: #de805a; }
+        .hero { overflow: hidden; }   /* the 600px glow must not widen the page on phones */
+        .chart-pair > *, .diagram-grid > *, .sim-grid > * { min-width: 0; }   /* let wide code scroll inside its column */
+        .slide p code, .slide li code, .slide td code { overflow-wrap: anywhere; }
+        .control-panel select { max-width: 100%; }
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="series-label">Simulation Engineering Toolkit &mdash; Presentation 04</div>
+    <h1>Modelling Memory Systems: <span class="accent">DRAM and HBM</span></h1>
+    <p class="subtitle">Why bandwidth times efficiency fails, and a command-level model that derives the efficiency instead: banks, rows and bank groups, the timing parameters, hits, misses and conflicts, FCFS and FR-FCFS, page policy, address mapping, refresh and tFAW, load and latency, validation four ways (including against DRAMsim3), and the model plugged into the FHE simulator.</p>
+
+    <div class="tags">
+        <span class="tag">DRAM timing</span>
+        <span class="tag">HBM</span>
+        <span class="tag">FR-FCFS</span>
+        <span class="tag">Address mapping</span>
+        <span class="tag">Refresh</span>
+        <span class="tag">DRAMsim3</span>
+        <span class="tag">Protocol checker</span>
+    </div>
+
+    <div class="pipeline">
+        <span class="pipeline-step">Map</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Schedule</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Constrain</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Check</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Cross-check</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Plug in</span>
+    </div>
+</header>
+
+<section class="slide" id="slide-00">
+    <div class="slide-number">00</div>
+    <h2>Topics We'll Cover</h2>
+    <ul class="contents-list">
+        <li><a href="#slide-01">Why "Bandwidth &times; Efficiency" Fails</a></li>
+        <li><a href="#slide-02">How DRAM Is Organised</a></li>
+        <li><a href="#slide-03">Commands and Timing Parameters</a></li>
+        <li><a href="#slide-04">Row Hits, Misses and Conflicts</a></li>
+        <li><a href="#slide-05">Scheduling and Page Policy</a></li>
+        <li><a href="#slide-06">Address Mapping</a></li>
+        <li><a href="#slide-07">Refresh and the Four-Activate Window</a></li>
+        <li><a href="#slide-08">Interactive: Patterns, Policies and Load</a></li>
+        <li><a href="#slide-09">Load and Latency</a></li>
+        <li><a href="#slide-10">How We Know the Model Is Right</a></li>
+        <li><a href="#slide-11">Cross-Checked Against DRAMsim3</a></li>
+        <li><a href="#slide-12">Plugging It Into the FHE Simulator</a></li>
+        <li><a href="#slide-13">What to Take Away</a></li>
+    </ul>
+    <div class="concepts">
+        <p><strong>Concepts used here, and where they are explained.</strong> Each links to a glossary entry: this <a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#glossary">series glossary</a>, or the glossaries of LLM Inference Simulators and FHE Accelerator Simulators for concepts those series already explain.</p>
+        <div class="chips"><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-beff" title="Modelling memory as peak bandwidth times a fixed derating factor. The achieved fraction of peak depends on access pattern, controller, address mapping and load, so a single factor is right for at most one of them.">“Bandwidth × efficiency”</a><a href="https://brendanjameslynskey.github.io/FHE_Hub_Accelerator_Simulators/#g-hbm" title="Off-chip high-bandwidth memory. Evaluation keys and DFT plaintexts are too big to keep on chip, so they stream from HBM, which is why bootstrapping is often memory-bound.">HBM and key streaming</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-dramorg" title="A DRAM channel has ranks of chips; each rank has bank groups of banks; each bank is an array of rows read through one row buffer. Banks work in parallel; accesses within a bank group must be further apart than across groups.">Channels, ranks, bank groups, banks and rows</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-dramtiming" title="ACT, RD/WR, PRE and REF, separated by minimum gaps such as tRCD, tRP, tCL, tRAS, tRC, tRRD, tCCD, tWTR, tWR and tRTP, defined per speed bin by the JEDEC standards.">DRAM commands and timing parameters</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-rowhit" title="A hit finds its row open (CL); a miss finds the bank closed (tRCD + CL); a conflict finds another row open (tRP + tRCD + CL). A controller&#x27;s main job is turning conflicts into hits.">Row hits, misses and conflicts</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-frfcfs" title="FCFS serves requests in arrival order. FR-FCFS (Rixner et al., 2000) issues ready row hits first, then the oldest ready command, overlapping row opening in some banks with transfers in others.">FCFS and FR-FCFS scheduling</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-pagepolicy" title="Open page leaves a row open after an access, betting on a hit; closed page precharges at once (auto-precharge), betting on a miss rather than a conflict.">Open and closed page policy</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-addrmap" title="Which address bits select channel, bank group, bank, row and column decides which patterns spread across banks. XOR hashing mixes row bits into the bank index so row-sized strides stop hitting one bank.">Address mapping and XOR bank hashing</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-refresh" title="Every tREFI a rank closes its banks and refreshes for tRFC, costing a stream about tRFC/tREFI of its bandwidth and setting the latency tail.">Refresh (tREFI, tRFC)</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-tfaw" title="At most four ACTs per rank in any window of tFAW, a limit on peak current. It caps random traffic, which needs one ACT per access, at 4 (BL/2) / tFAW of peak.">The four-activate window (tFAW)</a><a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-little" title="L = λW: mean population equals arrival rate times mean time in system, for any stable system. With the utilisation and forced-flow laws it gives free consistency checks on a simulator&#x27;s probes.">Little's law and the operational laws</a><a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-queueing" title="Closed-form results that a simulator&#x27;s engine must reproduce: M/M/1 mean time in system 1/(μ−λ); M/D/1 mean wait λS²/(2(1−ρ)) (Pollaczek–Khinchine). The KV link is tested this way.">Queueing theory checks (M/M/1, M/D/1)</a><a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-percentiles" title="Report p50, p90 and p99, not means, and plot the fraction of samples slower than x on log-log axes, where tails show. Say which population (all tokens or per request), and use streaming sketches when samples are many.">Percentiles and tail-latency CCDFs</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-protocheck" title="A checker that replays a controller&#x27;s command log and verifies every timing rule directly, sharing no code with the controller; with property-based traces it is the oracle that finds scheduling bugs.">Independent protocol checker</a><a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-hypothesis" title="Generate many random configurations and check that invariants hold for all of them; Hypothesis shrinks any failure to a minimal example.">Property-based testing (Hypothesis)</a><a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#g-crosssim" title="Running identical traces and parameters through an independent simulator (here DRAMsim3). Agreement where the physics dominates and disagreement where the designs differ both carry information.">Cross-checking against another simulator</a><a href="https://brendanjameslynskey.github.io/FHE_Hub_Accelerator_Simulators/#g-bound" title="The simulator&#x27;s verdict: the most-utilised resource sets the bound (HBM, NTT units, multiply-add lanes), or power when the power limit throttles a compute-bound design.">NTT-, MAC-, memory- and power-bound</a></div>
+    </div>
+</section>
+
+<section class="slide" id="slide-01">
+    <div class="slide-number">01</div>
+    <h2>Why "Bandwidth &times; Efficiency" Fails</h2>
+    <p>Architecture simulators usually model memory as a pipe: bytes divided by peak bandwidth, sometimes times a derating factor of "about 70%". The <a href="https://brendanjameslynskey.github.io/FHE_Hub_Accelerator_Simulators/#g-hbm">FHE simulator's HBM</a> works this way. The factor is not a property of the memory. It depends on the access pattern, the controller, the address mapping and the load. On a single HBM pseudo-channel with a single controller:</p>
+    <div class="callout"><div class="callout-label">One device, one controller, six patterns (results.md &sect;6)</div><p>Achieved efficiency ranges from 0.10 to 0.93 of peak.</p></div>
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel"><h4>Pattern</h4><p>A stream reuses open rows; random traffic opens a row for every access and is capped by how fast rows can be opened.</p></div>
+        <div class="diagram-panel"><h4>Controller and mapping</h4><p>The same HBM stream runs at 0.56 or 0.93 of peak depending on the scheduler; a DDR4 stream at 0.53 or 1.00 depending on where the bank-group bits sit.</p></div>
+        <div class="diagram-panel"><h4>Load</h4><p>Latency is flat until the queue fills, then climbs steeply. A fixed factor has no notion of queueing.</p></div>
+    </div>
+    <p>This deck builds a command-level model that <em>derives</em> the factor, checks it four ways, and plugs it into the FHE simulator. The code is <a href="https://github.com/BrendanJamesLynskey/Memory_System_Sim">Memory_System_Sim</a>; every number comes from its <code>examples/results.md</code>.</p>
+</section>
+
+<section class="slide" id="slide-02">
+    <div class="slide-number">02</div>
+    <h2>How DRAM Is Organised</h2>
+    <div class="canvas-wrap">
+        <svg viewBox="0 0 720 266" width="720" height="266" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hierarchy: a channel has ranks; a rank has bank groups; a bank group has banks; a bank is an array of rows with one row buffer">
+            <style>
+                .o1 { fill: #2b2520; stroke: #aabd59; stroke-width: 1.4; }
+                .o2 { fill: #2b2520; stroke: #e3b174; stroke-width: 1.2; }
+                .o3 { fill: #3a322b; stroke: #97cdc6; stroke-width: 1; }
+                .ot { fill: #efe8dc; font-family: 'Geist Mono', monospace; font-size: 11px; }
+                .od { fill: #a2978b; font-family: 'Geist Mono', monospace; font-size: 10px; }
+            </style>
+            <rect x="10" y="10" width="420" height="240" rx="6" class="o1"/><text x="22" y="30" class="ot">channel: one command bus, one data bus</text>
+            <rect x="24" y="42" width="392" height="198" rx="5" class="o2"/><text x="34" y="60" class="ot">rank (all chips answering together)</text>
+            <g>
+                <rect x="36" y="70" width="180" height="76" rx="4" class="o2"/><text x="44" y="86" class="od">bank group 0</text>
+                <rect x="44" y="92" width="38" height="46" class="o3"/><rect x="86" y="92" width="38" height="46" class="o3"/><rect x="128" y="92" width="38" height="46" class="o3"/><rect x="170" y="92" width="38" height="46" class="o3"/>
+                <rect x="228" y="70" width="180" height="76" rx="4" class="o2"/><text x="236" y="86" class="od">bank group 1</text>
+                <rect x="236" y="92" width="38" height="46" class="o3"/><rect x="278" y="92" width="38" height="46" class="o3"/><rect x="320" y="92" width="38" height="46" class="o3"/><rect x="362" y="92" width="38" height="46" class="o3"/>
+                <rect x="36" y="154" width="180" height="76" rx="4" class="o2"/><text x="44" y="170" class="od">bank group 2</text>
+                <rect x="228" y="154" width="180" height="76" rx="4" class="o2"/><text x="236" y="170" class="od">bank group 3</text>
+                <text x="60" y="206" class="od">4 banks each</text><text x="252" y="206" class="od">4 banks each</text>
+            </g>
+            <rect x="470" y="20" width="230" height="150" rx="5" class="o3"/><text x="480" y="38" class="ot">one bank</text>
+            <g stroke="#a2978b" stroke-width="0.6"><line x1="480" y1="50" x2="690" y2="50"/><line x1="480" y1="62" x2="690" y2="62"/><line x1="480" y1="74" x2="690" y2="74"/><line x1="480" y1="86" x2="690" y2="86"/><line x1="480" y1="98" x2="690" y2="98"/><line x1="480" y1="110" x2="690" y2="110"/></g>
+            <text x="486" y="128" class="od">rows (65,536 x 8 KiB per rank)</text>
+            <rect x="480" y="138" width="210" height="22" fill="#aabd59"/><text x="486" y="153" class="ot" style="fill:#1f1a16">row buffer: the open row</text>
+            <path d="M200,115 C320,40 400,40 468,60" stroke="#97cdc6" fill="none" stroke-width="1"/>
+            <text x="470" y="194" class="od">ACT copies a row into the buffer,</text>
+            <text x="470" y="208" class="od">RD/WR move one burst from it,</text>
+            <text x="470" y="222" class="od">PRE writes it back and closes it.</text>
+            <text x="470" y="244" class="od">HBM: each channel is two</text><text x="470" y="256" class="od">64-bit pseudo-channels.</text>
+        </svg>
+    </div>
+    <p>Parallelism comes from banks: while one bank opens a row, others can transfer data. A DDR4 bank group shares some internal circuitry, so back-to-back accesses <em>within</em> a group must be further apart than accesses <em>across</em> groups. HBM2-class stacks have 8 channels, each split into two pseudo-channels with their own banks and a 64-bit data bus.</p>
+</section>
+
+<section class="slide" id="slide-03">
+    <div class="slide-number">03</div>
+    <h2>Commands and Timing Parameters</h2>
+    <p>The controller issues <strong>ACT</strong> (open a row), <strong>RD</strong>/<strong>WR</strong> (one burst), <strong>PRE</strong> (close) and <strong>REF</strong> (refresh), at most one per cycle on the command bus. The JEDEC standards (JESD79-4 for DDR4, JESD235 for HBM) name the minimum gaps between commands. The values below are <strong>illustrative</strong>: in the range of a DDR4-3200 speed bin and an HBM2E-class pseudo-channel, not quoted from the standards. The DDR4 values coincide with DRAMsim3's <code>DDR4_8Gb_x8_3200</code> configuration, which slide 11 uses.</p>
+    <div class="table-wrap"><table>
+<thead><tr><th>parameter</th><th>DDR4</th><th>HBM</th></tr></thead>
+<tbody>
+<tr><td>tck_ns</td><td>0.625</td><td>0.625</td></tr>
+<tr><td>bus_bytes</td><td>8</td><td>8</td></tr>
+<tr><td>bl</td><td>8</td><td>4</td></tr>
+<tr><td>bankgroups</td><td>4</td><td>4</td></tr>
+<tr><td>banks</td><td>4</td><td>4</td></tr>
+<tr><td>row_bytes</td><td>8192</td><td>1024</td></tr>
+<tr><td>CL</td><td>22</td><td>23</td></tr>
+<tr><td>CWL</td><td>16</td><td>7</td></tr>
+<tr><td>RCD</td><td>22</td><td>23</td></tr>
+<tr><td>RP</td><td>22</td><td>23</td></tr>
+<tr><td>RAS</td><td>52</td><td>53</td></tr>
+<tr><td>RC</td><td>74</td><td>76</td></tr>
+<tr><td>RRD_S</td><td>4</td><td>4</td></tr>
+<tr><td>RRD_L</td><td>8</td><td>7</td></tr>
+<tr><td>FAW</td><td>34</td><td>26</td></tr>
+<tr><td>CCD_S</td><td>4</td><td>2</td></tr>
+<tr><td>CCD_L</td><td>8</td><td>4</td></tr>
+<tr><td>WR</td><td>24</td><td>26</td></tr>
+<tr><td>WTR_S</td><td>4</td><td>4</td></tr>
+<tr><td>WTR_L</td><td>12</td><td>12</td></tr>
+<tr><td>RTP</td><td>12</td><td>8</td></tr>
+<tr><td>RFC</td><td>560</td><td>560</td></tr>
+<tr><td>REFI</td><td>12480</td><td>6240</td></tr>
+<tr><td>peak per channel, GB/s</td><td>25.6</td><td>25.6</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/Memory_System_Sim/blob/main/examples/results.md">examples/results.md</a> in Memory_System_Sim</p>
+    <p>The controller computes, for each candidate command, the earliest cycle at which every constraint it is subject to holds. Per bank group, not just per rank: that distinction was a bug (slide 10).</p>
+    <div class="code-block">
+        <div class="code-header">src/memsim/controller.py: when may this ACT issue? <a class="src-link" href="https://github.com/BrendanJamesLynskey/Memory_System_Sim/blob/main/src/memsim/controller.py">source</a></div>
+        <pre><code><span class="kw">def</span> <span class="fn">t_act</span>(self, ra: int, bg: int, b: _Bank) -&gt; int:
+    t, rk = self.t, self.ranks[ra]
+    e = <span class="fn">max</span>(b.act_ok, rk.ref_until, rk.last_act + t.<span class="type">RRD_S</span>, rk.act_bg[bg] + t.<span class="type">RRD_L</span>)
+    <span class="kw">if</span> <span class="fn">len</span>(rk.acts) == <span class="num">4</span>:
+        e = <span class="fn">max</span>(e, rk.acts[<span class="num">0</span>] + t.<span class="type">FAW</span>)
+    <span class="kw">return</span> e</code></pre>
+    </div>
+</section>
+
+<section class="slide" id="slide-04">
+    <div class="slide-number">04</div>
+    <h2>Row Hits, Misses and Conflicts</h2>
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel"><h4>Hit</h4><p>The row is already open: RD, then data after CL. <code>CL + BL/2</code>.</p></div>
+        <div class="diagram-panel"><h4>Miss</h4><p>The bank is closed: ACT, wait RCD, RD. <code>RCD + CL + BL/2</code>.</p></div>
+        <div class="diagram-panel"><h4>Conflict</h4><p>Another row is open: PRE, wait RP, ACT, wait RCD, RD. <code>RP + RCD + CL + BL/2</code>.</p></div>
+    </div>
+    <p>Unloaded latencies, simulated against those closed forms, plus the bandwidth limits of the next three slides:</p>
+    <div class="table-wrap"><table>
+<thead><tr><th>device</th><th>check</th><th>simulated</th><th>closed form</th><th>formula</th></tr></thead>
+<tbody>
+<tr><td>DDR4</td><td>read, bank closed (cycles)</td><td>48</td><td>48</td><td>RCD + CL + BL/2</td></tr>
+<tr><td>DDR4</td><td>write, bank closed (cycles)</td><td>42</td><td>42</td><td>RCD + CWL + BL/2</td></tr>
+<tr><td>DDR4</td><td>read, row hit (cycles)</td><td>26</td><td>26</td><td>CL + BL/2</td></tr>
+<tr><td>DDR4</td><td>read, row conflict (cycles)</td><td>70</td><td>70</td><td>RP + RCD + CL + BL/2</td></tr>
+<tr><td>DDR4</td><td>streaming, no refresh (fraction of peak)</td><td>0.999</td><td>1</td><td>peak</td></tr>
+<tr><td>DDR4</td><td>refresh loss on a stream</td><td>0.037</td><td>0.045</td><td>RFC / REFI</td></tr>
+<tr><td>DDR4</td><td>same bank, next row each access</td><td>0.054</td><td>0.054</td><td>(BL/2) / RC</td></tr>
+<tr><td>DDR4</td><td>random reads, closed page</td><td>0.457</td><td>0.471</td><td>4 (BL/2) / FAW (activate-limited bound)</td></tr>
+<tr><td>HBM</td><td>read, bank closed (cycles)</td><td>48</td><td>48</td><td>RCD + CL + BL/2</td></tr>
+<tr><td>HBM</td><td>write, bank closed (cycles)</td><td>32</td><td>32</td><td>RCD + CWL + BL/2</td></tr>
+<tr><td>HBM</td><td>read, row hit (cycles)</td><td>25</td><td>25</td><td>CL + BL/2</td></tr>
+<tr><td>HBM</td><td>read, row conflict (cycles)</td><td>71</td><td>71</td><td>RP + RCD + CL + BL/2</td></tr>
+<tr><td>HBM</td><td>streaming, no refresh (fraction of peak)</td><td>0.998</td><td>1</td><td>peak</td></tr>
+<tr><td>HBM</td><td>refresh loss on a stream</td><td>0.094</td><td>0.090</td><td>RFC / REFI</td></tr>
+<tr><td>HBM</td><td>same bank, next row each access</td><td>0.026</td><td>0.026</td><td>(BL/2) / RC</td></tr>
+<tr><td>HBM</td><td>random reads, closed page</td><td>0.304</td><td>0.308</td><td>4 (BL/2) / FAW (activate-limited bound)</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/Memory_System_Sim/blob/main/examples/results.md">examples/results.md</a> in Memory_System_Sim</p>
+    <p>Every latency matches exactly. A conflict costs almost three times a hit on this DDR4, so a controller's main job is to turn conflicts into hits by choosing the order of requests.</p>
+</section>
+
+<section class="slide" id="slide-05">
+    <div class="slide-number">05</div>
+    <h2>Scheduling and Page Policy</h2>
+    <ul>
+        <li><strong>FCFS</strong>: serve requests strictly in arrival order. Simple and fair, but when the oldest request needs a row opened, every other bank waits too.</li>
+        <li><strong>FR-FCFS</strong> (first-ready, first-come-first-served; <a href="https://doi.org/10.1145/339647.339668">Rixner et al., ISCA 2000</a>): issue ready column commands (row hits) first, then the oldest ready command. It keeps a row open while queued requests still hit it, and overlaps opening rows in some banks with transfers in others.</li>
+        <li><strong>Open page</strong> leaves the row open after an access, betting on a hit. <strong>Closed page</strong> precharges at once (auto-precharge) unless a queued request hits the row, betting on a miss instead of a conflict.</li>
+    </ul>
+    <div class="table-wrap"><table>
+<thead><tr><th>pattern</th><th>FCFS open</th><th>FCFS closed</th><th>FR-FCFS open</th><th>FR-FCFS closed</th></tr></thead>
+<tbody>
+<tr><td>streaming</td><td>0.563 (0.97)</td><td>0.679 (0.97)</td><td>0.925 (0.97)</td><td>0.926 (0.97)</td></tr>
+<tr><td>streaming, 1 in 3 writes</td><td>0.147 (0.96)</td><td>0.149 (0.96)</td><td>0.804 (0.97)</td><td>0.803 (0.97)</td></tr>
+<tr><td>random (1 GiB)</td><td>0.039 (0.00)</td><td>0.062 (0.00)</td><td>0.270 (0.00)</td><td>0.276 (0.00)</td></tr>
+<tr><td>random, 1 in 3 writes</td><td>0.039 (0.00)</td><td>0.061 (0.00)</td><td>0.230 (0.00)</td><td>0.234 (0.00)</td></tr>
+<tr><td>4 interleaved streams</td><td>0.041 (0.14)</td><td>0.042 (0.14)</td><td>0.484 (0.80)</td><td>0.449 (0.73)</td></tr>
+<tr><td>stride 4 KiB</td><td>0.039 (0.00)</td><td>0.075 (0.00)</td><td>0.095 (0.00)</td><td>0.095 (0.00)</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/Memory_System_Sim/blob/main/examples/results.md">examples/results.md</a> in Memory_System_Sim</p>
+    <p>FR-FCFS wins everywhere, by up to 12&times; on interleaved streams, whose rows FCFS keeps closing. Writes cost a stream 13% even under FR-FCFS, because the bus has to turn around and a read must wait tWTR after a write. Page policy matters less than the scheduler here: with a full queue, the controller already knows whether another hit is coming.</p>
+</section>
+
+<section class="slide" id="slide-06">
+    <div class="slide-number">06</div>
+    <h2>Address Mapping</h2>
+    <p>The mapping decides which address bits select the channel, bank group, bank, row and column, and so which patterns spread across banks:</p>
+    <div class="code-block">
+        <div class="code-header">src/memsim/mapping.py: named schemes, most significant field first <a class="src-link" href="https://github.com/BrendanJamesLynskey/Memory_System_Sim/blob/main/src/memsim/mapping.py">source</a></div>
+        <pre><code><span class="type">SCHEMES</span> = {
+    <span class="str">"RoRaBaCoBgCh"</span>: (<span class="str">"ro"</span>, <span class="str">"ra"</span>, <span class="str">"ba"</span>, <span class="str">"co"</span>, <span class="str">"bg"</span>, <span class="str">"ch"</span>),    <span class="cm"># default: a stream rotates over bank groups</span>
+    <span class="str">"RoRaBgBaCoCh"</span>: (<span class="str">"ro"</span>, <span class="str">"ra"</span>, <span class="str">"bg"</span>, <span class="str">"ba"</span>, <span class="str">"co"</span>, <span class="str">"ch"</span>),    <span class="cm"># a stream stays in one bank group (tCCD_L)</span>
+    <span class="str">"RoCoRaBgBaCh"</span>: (<span class="str">"ro"</span>, <span class="str">"co"</span>, <span class="str">"ra"</span>, <span class="str">"bg"</span>, <span class="str">"ba"</span>, <span class="str">"ch"</span>),    <span class="cm"># consecutive bursts rotate over banks</span>
+    <span class="str">"ChRaBgBaRoCo"</span>: (<span class="str">"ch"</span>, <span class="str">"ra"</span>, <span class="str">"bg"</span>, <span class="str">"ba"</span>, <span class="str">"ro"</span>, <span class="str">"co"</span>),    <span class="cm"># one bank per huge region (worst parallelism)</span>
+}</code></pre>
+    </div>
+    <div class="table-wrap"><table>
+<thead><tr><th>mapping (MSB to LSB)</th><th>streaming</th><th>stride = one row (same bank)</th><th>stride 8 KiB</th><th>random</th></tr></thead>
+<tbody>
+<tr><td>RoRaBaCoBgCh</td><td>0.998</td><td>0.054</td><td>0.499</td><td>0.456</td></tr>
+<tr><td>RoRaBaCoBgCh + XOR</td><td>0.996</td><td>0.456</td><td>0.841</td><td>0.457</td></tr>
+<tr><td>RoRaBgBaCoCh</td><td>0.526</td><td>0.054</td><td>0.457</td><td>0.455</td></tr>
+<tr><td>RoRaBgBaCoCh + XOR</td><td>0.526</td><td>0.456</td><td>0.457</td><td>0.456</td></tr>
+<tr><td>RoCoRaBgBaCh</td><td>0.998</td><td>0.054</td><td>0.363</td><td>0.456</td></tr>
+<tr><td>RoCoRaBgBaCh + XOR</td><td>0.998</td><td>0.456</td><td>0.841</td><td>0.456</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/Memory_System_Sim/blob/main/examples/results.md">examples/results.md</a> in Memory_System_Sim</p>
+    <ul>
+        <li><strong>Bank groups below the column bits.</strong> If a row's bursts stay in one bank group, back-to-back reads are tCCD_L apart instead of tCCD_S: streaming falls from 0.998 to 0.526 of peak. Real DDR4 controllers interleave bank groups at fine granularity for this reason.</li>
+        <li><strong>XOR bank hashing</strong> (<a href="https://doi.org/10.1145/360128.360134">Zhang, Zhu and Zhang, MICRO 2000</a>) mixes low row bits into the bank index, so a stride of exactly one row stops hammering one bank: 0.054 becomes 0.456.</li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-07">
+    <div class="slide-number">07</div>
+    <h2>Refresh and the Four-Activate Window</h2>
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel"><h4>Refresh</h4><p>Every tREFI the rank closes its banks and is busy for tRFC. A stream therefore loses about tRFC / tREFI: 4.5% on this DDR4, 9% on this HBM model, where the refresh interval is half as long. Measured on a stream: 3.7% and 9.4% (section 2 of the results).</p></div>
+        <div class="diagram-panel"><h4>tFAW</h4><p>At most four ACTs in any window of tFAW, a limit on peak current. Random traffic needs one ACT per burst, so its bandwidth is capped at <code>4 (BL/2) / tFAW</code> of peak: 0.471 for DDR4, 0.308 for HBM. Closed-page random reads reach 0.457 and 0.304.</p></div>
+    </div>
+    <p>Two more bounds follow the same pattern. A stride that hits the same bank's next row each time runs at one access per tRC: simulated 0.054 and 0.026, against (BL/2) / tRC = 0.054 and 0.026. Without refresh, streaming reaches 0.999 of peak. These closed forms are tests in the repository (<code>tests/test_controller.py</code>), not just slide material.</p>
+</section>
+
+<section class="slide" id="slide-08">
+    <div class="slide-number">08</div>
+    <h2>Interactive: Patterns, Policies and Load</h2>
+    <p>Recorded results, not a live model. Pick a pattern and a policy to see the bandwidth it sustains. The chart shows mean and p99 latency against offered load for streaming and random traffic on one HBM pseudo-channel (FR-FCFS, open page). The dashed line marks the load you pick. Little's law (<a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-little">LLM Inference Simulators glossary</a>) turns the latency into the number of requests in flight.</p>
+    <div class="control-panel">
+        <div class="sim-grid">
+            <div class="control-row"><label for="mm-p">Pattern</label><select id="mm-p"></select></div>
+            <div class="control-row"><label for="mm-s">Scheduler and page</label><select id="mm-s"></select></div>
+            <div class="control-row"><label for="mm-l">Offered load</label><input type="range" id="mm-l" min="0" max="9" step="1" value="4"><span class="val" id="mm-l-val"></span></div>
+        </div>
+        <div class="metric-grid" id="mm-m"></div>
+        <div class="canvas-wrap"><svg id="mm-svg" viewBox="0 0 720 260" width="720" height="260" xmlns="http://www.w3.org/2000/svg"></svg></div>
+        <div class="result-box" id="mm-r"></div>
+    </div>
+    <script>
+    (function () {
+        const PAT = [["pattern", "FCFS open", "FCFS closed", "FR-FCFS open", "FR-FCFS closed"], ["streaming", "0.563 (0.97)", "0.679 (0.97)", "0.925 (0.97)", "0.926 (0.97)"], ["streaming, 1 in 3 writes", "0.147 (0.96)", "0.149 (0.96)", "0.804 (0.97)", "0.803 (0.97)"], ["random (1 GiB)", "0.039 (0.00)", "0.062 (0.00)", "0.270 (0.00)", "0.276 (0.00)"], ["random, 1 in 3 writes", "0.039 (0.00)", "0.061 (0.00)", "0.230 (0.00)", "0.234 (0.00)"], ["4 interleaved streams", "0.041 (0.14)", "0.042 (0.14)", "0.484 (0.80)", "0.449 (0.73)"], ["stride 4 KiB", "0.039 (0.00)", "0.075 (0.00)", "0.095 (0.00)", "0.095 (0.00)"]];  // from Memory_System_Sim/examples/results.md
+        const LOAD = [["offered load (fraction of peak)", "streaming mean ns", "streaming p99 ns", "random mean ns", "random p99 ns"], ["0.10", "37", "365", "83", "444"], ["0.20", "41", "370", "139", "512"], ["0.30", "42", "373", "1250", "2699"], ["0.40", "49", "378", "", ""], ["0.50", "52", "389", "", ""], ["0.60", "68", "384", "", ""], ["0.70", "86", "408", "", ""], ["0.80", "129", "415", "", ""], ["0.85", "162", "433", "", ""], ["0.90", "247", "557", "", ""]];  // from Memory_System_Sim/examples/results.md
+        const $ = id => document.getElementById(id);
+        PAT.slice(1).forEach((r, i) => $('mm-p').add(new Option(r[0], i + 1)));
+        PAT[0].slice(1).forEach((h, i) => $('mm-s').add(new Option(h, i + 1)));
+        $('mm-s').value = '3';
+        const peak = 25.6, access = 32;   // GB/s and bytes per burst of one pseudo-channel (results.md section 1)
+        const loads = LOAD.slice(1).map(r => ({ load: +r[0], sm: +r[1], sp: +r[2], rm: r[3] ? +r[3] : null, rp: r[4] ? +r[4] : null }));
+        function draw() {
+            const row = PAT[+$('mm-p').value], cell = row[+$('mm-s').value];
+            const eff = parseFloat(cell), hit = parseFloat(cell.split('(')[1]);
+            const L = loads[+$('mm-l').value];
+            $('mm-l-val').textContent = L.load.toFixed(2) + ' of peak';
+            const m = (l, v) => `<div class="metric"><div class="metric-label">${l}</div><div class="metric-value">${v}</div></div>`;
+            const inflight = L.load * peak * L.sm / access;   // Little: (requests/ns) x ns
+            $('mm-m').innerHTML = m('Sustained bandwidth', (eff * peak).toFixed(1) + ' GB/s') + m('Fraction of peak', eff.toFixed(3))
+                + m('Row-hit rate', hit.toFixed(2)) + m('Streaming requests in flight (Little)', inflight.toFixed(1));
+            const X = l => 60 + 620 * l, Y = ns => 230 - 190 * Math.log10(ns / 20) / Math.log10(4000 / 20);
+            let svg = `<line x1="60" y1="230" x2="690" y2="230" stroke="#a2978b"/><line x1="60" y1="20" x2="60" y2="230" stroke="#a2978b"/>`;
+            [20, 50, 100, 300, 1000, 3000].forEach(v => { svg += `<text x="54" y="${Y(v) + 3}" text-anchor="end" fill="#a2978b" font-family="Geist Mono, monospace" font-size="10">${v}</text><line x1="60" y1="${Y(v)}" x2="690" y2="${Y(v)}" stroke="#3a322b"/>`; });
+            [0, 0.25, 0.5, 0.75, 1].forEach(v => { svg += `<text x="${X(v)}" y="246" text-anchor="middle" fill="#a2978b" font-family="Geist Mono, monospace" font-size="10">${v}</text>`; });
+            svg += `<text x="370" y="258" text-anchor="middle" fill="#a2978b" font-family="Geist Mono, monospace" font-size="10">offered load (fraction of peak)</text><text x="14" y="125" fill="#a2978b" font-family="Geist Mono, monospace" font-size="10" transform="rotate(-90 14 125)">latency ns (log)</text>`;
+            const line = (key, col, dash) => { const pts = loads.filter(p => p[key] !== null).map(p => `${X(p.load)},${Y(p[key])}`).join(' ');
+                return `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2" ${dash ? 'stroke-dasharray="5 3"' : ''}/>`; };
+            svg += line('sm', '#aabd59') + line('sp', '#aabd59', 1) + line('rm', '#e3b174') + line('rp', '#e3b174', 1);
+            svg += `<line x1="${X(L.load)}" y1="20" x2="${X(L.load)}" y2="230" stroke="#97cdc6" stroke-dasharray="3 3"/>`;
+            svg += `<rect x="420" y="26" width="262" height="58" fill="#1f1a16" stroke="#3a322b"/>`
+                + `<line x1="430" y1="40" x2="452" y2="40" stroke="#aabd59" stroke-width="2"/><text x="458" y="44" fill="#efe8dc" font-family="Geist Mono, monospace" font-size="10">streaming: mean, p99 dashed</text>`
+                + `<line x1="430" y1="58" x2="452" y2="58" stroke="#e3b174" stroke-width="2"/><text x="458" y="62" fill="#efe8dc" font-family="Geist Mono, monospace" font-size="10">random: mean, p99 dashed</text>`
+                + `<text x="430" y="78" fill="#a2978b" font-family="Geist Mono, monospace" font-size="10">random saturates near 0.27</text>`;
+            $('mm-svg').innerHTML = svg;
+            $('mm-r').innerHTML = `<span class="line-label">at ${L.load.toFixed(2)} of peak</span> streaming waits ${L.sm} ns on average and ${L.sp} ns at p99`
+                + (L.rm !== null ? `; random waits ${L.rm} ns (p99 ${L.rp} ns).` : '; random traffic cannot be offered this much: it saturates first.')
+                + ` The p99 of streaming is set by refresh: a request that arrives during tRFC (350 ns) waits for it.`;
+        }
+        ['mm-p', 'mm-s', 'mm-l'].forEach(id => $(id).addEventListener('input', draw));
+        draw();
+    })();
+    </script>
+</section>
+
+<section class="slide" id="slide-09">
+    <div class="slide-number">09</div>
+    <h2>Load and Latency</h2>
+    <div class="table-wrap"><table>
+<thead><tr><th>offered load (fraction of peak)</th><th>streaming mean ns</th><th>streaming p99 ns</th><th>random mean ns</th><th>random p99 ns</th></tr></thead>
+<tbody>
+<tr><td>0.10</td><td>37</td><td>365</td><td>83</td><td>444</td></tr>
+<tr><td>0.20</td><td>41</td><td>370</td><td>139</td><td>512</td></tr>
+<tr><td>0.30</td><td>42</td><td>373</td><td>1250</td><td>2699</td></tr>
+<tr><td>0.40</td><td>49</td><td>378</td><td></td><td></td></tr>
+<tr><td>0.50</td><td>52</td><td>389</td><td></td><td></td></tr>
+<tr><td>0.60</td><td>68</td><td>384</td><td></td><td></td></tr>
+<tr><td>0.70</td><td>86</td><td>408</td><td></td><td></td></tr>
+<tr><td>0.80</td><td>129</td><td>415</td><td></td><td></td></tr>
+<tr><td>0.85</td><td>162</td><td>433</td><td></td><td></td></tr>
+<tr><td>0.90</td><td>247</td><td>557</td><td></td><td></td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/Memory_System_Sim/blob/main/examples/results.md">examples/results.md</a> in Memory_System_Sim</p>
+    <ul>
+        <li><strong>Streaming</strong> stays near its unloaded latency to about half of peak, then queueing takes over: 37 ns at 0.1 rises to 247 ns at 0.9, the familiar hockey stick (<a href="https://brendanjameslynskey.github.io/LLM_Hub_Inference_Simulators/#g-queueing">queueing checks</a>).</li>
+        <li><strong>Random</strong> traffic saturates near 0.27 of peak (slide 05), so at 0.3 its queue grows without bound and the mean is already 1.25 &micro;s.</li>
+        <li><strong>The tail is refresh.</strong> Streaming's p99 is 365&ndash;557 ns at every load. A refresh is in progress about 9% of the time (tRFC / tREFI), so the slowest few per cent of requests wait for one: 350 ns.</li>
+    </ul>
+    <p>A memory model that ignores load would give the 37 ns number to a simulator running at 90% utilisation, and miss the tail completely.</p>
+</section>
+
+<section class="slide" id="slide-10">
+    <div class="slide-number">10</div>
+    <h2>How We Know the Model Is Right</h2>
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel"><h4>1. Closed forms</h4><p>The latencies and bounds of slides 04 and 07, asserted in <code>tests/test_controller.py</code>.</p></div>
+        <div class="diagram-panel"><h4>2. An independent protocol checker</h4><p><code>memsim.checker</code> replays the command log and checks each rule as stated ("any two ACTs to one bank are at least tRC apart"), sharing no code with the controller.</p></div>
+        <div class="diagram-panel"><h4>3. Property-based traces</h4><p>Hypothesis generates random traces, schedulers, page policies, mappings, queue depths and refresh settings. Every command stream must pass the checker, and every request must complete.</p></div>
+        <div class="diagram-panel"><h4>4. Another simulator</h4><p>DRAMsim3 on the same traces (next slide).</p></div>
+    </div>
+    <p><strong>What it found.</strong> Hypothesis produced a trace with a write to bank group 0, then a write to group 1, then a read from group 0. The controller remembered only the <em>last</em> write, so it applied tWTR_S from the group-1 write. It should have applied tWTR_L from the group-0 write. The checker flagged "WR-RD same bank group (WTR_L): 28 &lt; 32". The fix keeps per-group history; the shrunk example is now a regression test:</p>
+    <div class="code-block">
+        <div class="code-header">tests/test_controller.py <a class="src-link" href="https://github.com/BrendanJamesLynskey/Memory_System_Sim/blob/main/tests/test_controller.py">source</a></div>
+        <pre><code><span class="kw">def</span> <span class="fn">test_regression_wtr_l_after_a_later_write_to_another_group</span>():
+    <span class="str">""</span>"<span class="type">Found</span> by <span class="type">Hypothesis</span>: <span class="type">WR</span> (group <span class="num">0</span>), <span class="type">WR</span> (group <span class="num">1</span>), <span class="type">RD</span> (group <span class="num">0</span>). <span class="type">The</span> read must wait <span class="type">WTR_L</span> after
+    the group-<span class="num">0</span> write, <span class="kw">not</span> just <span class="type">WTR_S</span> after the later group-<span class="num">1</span> write.<span class="str">""</span>"
+    t = <span class="type">PRESETS</span>[<span class="str">"ddr4"</span>]
+    m = <span class="type">AddressMapping</span>(t)
+    g0, g1 = <span class="num">0</span>, <span class="num">1</span> &lt;&lt; m.shift[<span class="str">"bg"</span>]
+    reqs = [<span class="type">Request</span>(g0, write=<span class="kw">True</span>), <span class="type">Request</span>(g1, write=<span class="kw">True</span>), <span class="type">Request</span>(g0 + (<span class="num">1</span> &lt;&lt; m.shift[<span class="str">"co"</span>]))]
+    <span class="fn">checked</span>(t, reqs, mapping=m, refresh=<span class="kw">False</span>)
+    wr0, rd = reqs[<span class="num">0</span>], reqs[<span class="num">2</span>]
+    <span class="kw">assert</span> rd.issue &gt;= wr0.done + t.<span class="type">WTR_L</span></code></pre>
+    </div>
+    <p>Who checks the checker? Its own tests plant violations in legal logs, and run a controller subclass with tFAW deliberately removed. The checker must flag every one.</p>
+</section>
+
+<section class="slide" id="slide-11">
+    <div class="slide-number">11</div>
+    <h2>Cross-Checked Against DRAMsim3</h2>
+    <p><a href="https://github.com/umd-memsys/DRAMsim3">DRAMsim3</a> (<a href="https://doi.org/10.1109/LCA.2020.2973991">Li et al., IEEE CAL 2020</a>) is a widely used cycle-accurate DRAM simulator. Both simulators ran the same traces, with the same timing (its <code>DDR4_8Gb_x8_3200</code> config, one rank) and the same address mapping:</p>
+    <p>DRAMsim3 commit 2981759; 60,000 cycles per saturation run; throughput as a fraction of the data-bus peak.</p>
+    <div class="table-wrap"><table>
+<thead><tr><th>DRAMsim3 mapping</th><th>trace</th><th>metric</th><th>DRAMsim3</th><th>memsim</th><th>memsim vs DRAMsim3</th></tr></thead>
+<tbody>
+<tr><td>rochrababgco</td><td>stream reads</td><td>throughput / peak</td><td>0.670</td><td>0.619</td><td>-7.6%</td></tr>
+<tr><td>rochrababgco</td><td>stream, 1 in 3 writes</td><td>throughput / peak</td><td>0.676</td><td>0.578</td><td>-14.5%</td></tr>
+<tr><td>rochrababgco</td><td>random reads (1 GiB)</td><td>throughput / peak</td><td>0.450</td><td>0.440</td><td>-2.2%</td></tr>
+<tr><td>rochrababgco</td><td>random, 1 in 3 writes</td><td>throughput / peak</td><td>0.445</td><td>0.442</td><td>-0.7%</td></tr>
+<tr><td>rochrababgco</td><td>same bank, next row each time</td><td>throughput / peak</td><td>0.052</td><td>0.052</td><td>+0.0%</td></tr>
+<tr><td>rochrababgco</td><td>4 interleaved streams</td><td>throughput / peak</td><td>0.310</td><td>0.476</td><td>+53.5%</td></tr>
+<tr><td>rochrababgco</td><td>sparse random reads (latency)</td><td>mean read latency (cycles)</td><td>73.0</td><td>72.1</td><td>-1.2%</td></tr>
+<tr><td>rochrabacobg</td><td>stream reads</td><td>throughput / peak</td><td>0.955</td><td>0.958</td><td>+0.3%</td></tr>
+<tr><td>rochrabacobg</td><td>stream, 1 in 3 writes</td><td>throughput / peak</td><td>0.903</td><td>0.911</td><td>+1.0%</td></tr>
+<tr><td>rochrabacobg</td><td>random reads (1 GiB)</td><td>throughput / peak</td><td>0.450</td><td>0.438</td><td>-2.8%</td></tr>
+<tr><td>rochrabacobg</td><td>random, 1 in 3 writes</td><td>throughput / peak</td><td>0.443</td><td>0.441</td><td>-0.4%</td></tr>
+<tr><td>rochrabacobg</td><td>same bank, next row each time</td><td>throughput / peak</td><td>0.052</td><td>0.052</td><td>+0.0%</td></tr>
+<tr><td>rochrabacobg</td><td>4 interleaved streams</td><td>throughput / peak</td><td>0.814</td><td>0.684</td><td>-15.9%</td></tr>
+<tr><td>rochrabacobg</td><td>sparse random reads (latency)</td><td>mean read latency (cycles)</td><td>70.7</td><td>69.9</td><td>-1.2%</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/Memory_System_Sim/blob/main/examples/results.md">examples/results.md</a> in Memory_System_Sim</p>
+    <ul>
+        <li><strong>Close where the physics dominates:</strong> streaming with bank groups interleaved (+0.3%), random reads (&minus;2 to &minus;3%), the same-bank stride (exact) and unloaded latency (&minus;1.2%).</li>
+        <li><strong>Apart where the controllers differ:</strong> interleaved streams differ by 16&ndash;54%. DRAMsim3 queues per bank (eight commands per bank, 32 transactions); memsim has one shared 32-entry queue. Which streams' rows stay open depends on the queue.</li>
+    </ul>
+    <p>A cross-check that agrees everywhere usually means the two models share assumptions. This one shows which results depend on the controller, and therefore need its design specified before they are quoted.</p>
+</section>
+
+<section class="slide" id="slide-12">
+    <div class="slide-number">12</div>
+    <h2>Plugging It Into the FHE Simulator</h2>
+    <p>FHE_Accelerator_Sim moves HBM traffic as 4 MiB chunks through one first-come resource. It now accepts an optional memory model, <code>Accelerator(memory=...)</code>, that times each chunk given its size, its direction and the direction of the chunk before it. Memory_System_Sim's adapter simulates one pseudo-channel's share of the chunk at command level, memoised:</p>
+    <div class="code-block">
+        <div class="code-header">src/memsim/fhe.py: the interface the FHE simulator calls <a class="src-link" href="https://github.com/BrendanJamesLynskey/Memory_System_Sim/blob/main/src/memsim/fhe.py">source</a></div>
+        <pre><code><span class="kw">def</span> <span class="fn">chunk_time</span>(self, nbytes: int, write: bool, prev_write: bool | <span class="kw">None</span>, peak_gbps: float) -&gt; float:
+    <span class="str">""</span><span class="str">"Seconds to move ``nbytes`` through HBM whose peak is ``peak_gbps`` (FHE_Accelerator_Sim protocol)."</span><span class="str">""</span>
+    t = self.timing
+    channels = peak_gbps / t.<span class="fn">channel_peak_gbps</span>()
+    bursts = <span class="fn">max</span>(<span class="num">1</span>, <span class="fn">round</span>(nbytes / t.access_bytes / channels))
+    <span class="kw">return</span> self.<span class="fn">channel_cycles</span>(bursts, write, prev_write) * t.tck_ns * <span class="num">1e-9</span></code></pre>
+    </div>
+    <div class="table-wrap"><table>
+<thead><tr><th>HBM model</th><th>baseline algorithm</th><th>Min-KS + seeded keys + OTF plaintexts</th></tr></thead>
+<tbody>
+<tr><td>peak bandwidth (default)</td><td>13.94 ms, 89%, memory-bound</td><td>7.19 ms, 11%, MAC-bound</td></tr>
+<tr><td>flat: 0.7 x bandwidth</td><td>19.26 ms, 92%, memory-bound</td><td>7.29 ms, 15%, MAC-bound</td></tr>
+<tr><td>flat: 0.9 x bandwidth</td><td>15.33 ms, 90%, memory-bound</td><td>7.21 ms, 12%, MAC-bound</td></tr>
+<tr><td>Memory_System_Sim: FR-FCFS, bank groups interleaved</td><td>15.31 ms, 90%, memory-bound</td><td>7.21 ms, 12%, MAC-bound</td></tr>
+<tr><td>... with 1 MiB chunks</td><td>15.64 ms, 90%, memory-bound</td><td>7.21 ms, 12%, MAC-bound</td></tr>
+<tr><td>... FCFS scheduler</td><td>23.70 ms, 94%, memory-bound</td><td>7.40 ms, 19%, MAC-bound</td></tr>
+<tr><td>... a row's bursts in one bank group</td><td>24.43 ms, 94%, memory-bound</td><td>7.42 ms, 19%, MAC-bound</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/FHE_Accelerator_Sim/blob/main/examples/results.md">examples/results.md</a> in FHE_Accelerator_Sim</p>
+    <div class="table-wrap"><table>
+<thead><tr><th>HBM peak</th><th>peak bandwidth</th><th>flat 0.7</th><th>flat 0.9</th><th>Memory_System_Sim</th></tr></thead>
+<tbody>
+<tr><td>140 GB/s</td><td>10.23 ms, memory-bound</td><td>12.33 ms, memory-bound</td><td>10.78 ms, memory-bound</td><td>10.73 ms, memory-bound</td></tr>
+<tr><td>160 GB/s</td><td>9.66 ms, MAC-bound</td><td>11.46 ms, memory-bound</td><td>10.10 ms, memory-bound</td><td>10.06 ms, memory-bound</td></tr>
+<tr><td>200 GB/s</td><td>8.93 ms, MAC-bound</td><td>10.23 ms, memory-bound</td><td>9.25 ms, MAC-bound</td><td>9.23 ms, MAC-bound</td></tr>
+<tr><td>250 GB/s</td><td>8.33 ms, MAC-bound</td><td>9.34 ms, MAC-bound</td><td>8.57 ms, MAC-bound</td><td>8.56 ms, MAC-bound</td></tr>
+</tbody></table></div>
+    <p class="src">Source: <a href="https://github.com/BrendanJamesLynskey/FHE_Accelerator_Sim/blob/main/examples/results.md">examples/results.md</a> in FHE_Accelerator_Sim</p>
+    <p><strong>Reading it.</strong> FHE traffic is long sequential streams, so a good controller reaches about 0.90 of peak, mostly lost to refresh. A well-chosen flat 0.9 then agrees to 0.2%. A folklore 0.7 adds 38% to the bootstrap. An FCFS controller or a bank-group-unfriendly mapping adds 70&ndash;75%. Near the balance point the model changes the verdict: at 160 GB/s, peak bandwidth calls the optimised design MAC-bound and the HBM model calls it memory-bound. At 200 GB/s, flat 0.7 calls it memory-bound and the model agrees with peak that it is MAC-bound.</p>
+</section>
+
+<section class="slide" id="slide-13">
+    <div class="slide-number">13</div>
+    <h2>What to Take Away</h2>
+    <ul>
+        <li><strong>DRAM bandwidth is a function, not a number.</strong> One HBM pseudo-channel delivered 0.10&ndash;0.93 of peak across six patterns.</li>
+        <li><strong>Timing parameters are constraints between commands.</strong> Model them per bank, per bank group and per rank, and check them with an independent checker.</li>
+        <li><strong>FR-FCFS and a bank-group-aware mapping</strong> matter more than page policy for these patterns. XOR hashing rescues pathological strides.</li>
+        <li><strong>Validate four ways:</strong> closed forms, a protocol checker, property-based traces and another simulator. Each found something the others would not.</li>
+        <li><strong>Derive the derating factor, then reuse it.</strong> Plugged into a system simulator, the detailed model mostly confirms a well-chosen factor, rules out a folklore one, and decides the verdict near the balance point.</li>
+    </ul>
+    <ul class="res-list">
+        <li><a href="https://github.com/BrendanJamesLynskey/Memory_System_Sim">Memory_System_Sim</a><span class="what">The simulator, checker, tests, DRAMsim3 cross-check and <code>examples/results.md</code>.</span></li>
+        <li><a href="https://github.com/BrendanJamesLynskey/FHE_Accelerator_Sim">FHE_Accelerator_Sim</a><span class="what">Results section 20: the HBM model inside the FHE simulator.</span></li>
+        <li><a href="https://doi.org/10.1109/LCA.2015.2414456">Ramulator (Kim, Yang and Mutlu, IEEE CAL 2016)</a> and <a href="https://doi.org/10.1109/LCA.2020.2973991">DRAMsim3</a><span class="what">The two most-used open DRAM simulators.</span></li>
+        <li><a href="https://brendanjameslynskey.github.io/FHESim_05_Results_and_Design_Space/#slide-03">FHE Accelerator Simulators 05: NTT-bound against memory-bound</a><span class="what">Where the balance point comes from.</span></li>
+        <li><a href="https://github.com/BrendanJamesLynskey/Interview_SoC_Architecture">Interview_SoC_Architecture</a><span class="what">SoC and memory-architecture interview questions.</span></li>
+    </ul>
+</section>
+
+<!-- ════════════════════════════════════ Footer ════════════════════════════════════ -->
+<footer class="footer">
+    <p>Part of the <a href="https://github.com/BrendanJamesLynskey/SimEng_Hub_Toolkit">Simulation Engineering Toolkit series</a> &middot; <a href="https://brendanjameslynskey.github.io/SimEng_Hub_Toolkit/#glossary">glossary: every concept and where it is explained</a> &middot; code: <a href="https://github.com/BrendanJamesLynskey/Memory_System_Sim">Memory_System_Sim</a> &middot; <a href="https://github.com/BrendanJamesLynskey/FHE_Accelerator_Sim">FHE_Accelerator_Sim</a></p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem;"><a href="https://brendanjameslynskey.github.io/SimEng_03_SystemC_TLM_Models/">&larr; 03 C++ Performance Models with SystemC TLM-2.0</a> &nbsp;&middot;&nbsp; <a href="https://brendanjameslynskey.github.io/SimEng_05_Verification_Bridge_cocotb/">05 Verification Bridge: cocotb, Verilator and Golden Models &rarr;</a></p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem;">Interview questions: <a href="https://github.com/BrendanJamesLynskey/Interview_SoC_Architecture">Interview_SoC_Architecture</a> &middot; sister series: <a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Inference_Simulators">LLM Inference Simulators</a> &middot; <a href="https://github.com/BrendanJamesLynskey/FHE_Hub_Accelerator_Simulators">FHE Accelerator Simulators</a></p>
+</footer>
+
+<script>
+    // Smooth scroll for TOC links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
+    // Subtle fade-in on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.slide').forEach(slide => {
+        slide.style.opacity = '0';
+        slide.style.transform = 'translateY(30px)';
+        slide.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(slide);
+    });
+</script>
+
+</body>
+</html>
